@@ -1,93 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Logging;
+﻿using System.Collections.Generic;
 using UnityEngine;
-
+using Logging;
 
 namespace ShowMeTheGoods.Core;
 
 /// <summary>
-///     Handler for updating minimap pins tracking trader locations.
+///     Component to attach to items to identify them as a trade route map.
+///     Also used by TraderLocationManager to control minimap pins for each player.
 /// </summary>
 internal class TradeRouteMap : MonoBehaviour
 {
-    /// <summary>
-    ///  maybe make this static to prevent just spamming multiple maps
-    /// </summary>
     private const float PinDuration = 10f; // seconds
-    private Minimap.PinData TraderPinData   ;
-    private const float DefaultRadius = 100f;
+    private Minimap.PinData LocationPinData;
+    private const float DefaultRadius = 1500f;
+    private const float RadiusVariance = 300f;
+    private const float PositionVariance = RadiusVariance / 2f;
     private const string DefaultPinName = "Trader?";
-
-    public void Awake()
-    {
-    }
-
-    public void PinClosestUndiscoveredTraderLocation()
-    {
-        if (!CanReadMap()) { return; }
-        if (this.FindClosestTraderLocation(out ZoneSystem.LocationInstance locationInstance))
-        {
-            Log.LogInfo($"Closest Trader Location: {locationInstance.m_location.m_prefabName}");
-        }
-
-        if (!Player.m_localPlayer || !Minimap.instance || !InventoryGui.instance)
-        {
-            return;
-        }
-
-        // Create Pin and modify size
-        Vector3 pinPos = locationInstance.m_position;  // want to add random noise to this
-        TraderPinData = Minimap.instance.AddPin(pinPos, Minimap.PinType.EventArea, DefaultPinName, save: false, isChecked: false);
-        TraderPinData.m_worldSize = DefaultRadius; // want to add random noise to this
-
-        // Show Pin on the map
-        InventoryGui.instance.Hide();  // force close to prevent getting locked from input
-        Sprite sprite = Minimap.instance.GetSprite(Minimap.PinType.EventArea);
-        Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, $"$msg_pin_added: {DefaultPinName}", 0, sprite);
-        Minimap.instance.ShowPointOnMap(pinPos);
-
-        if (!this.gameObject.activeInHierarchy)
-        {
-            this.gameObject.SetActive(true);
-        }
-        Log.LogInfo($"GamObject active: {this.gameObject.activeInHierarchy}");
-        Log.LogInfo($"TraderRouteMap active: {this.isActiveAndEnabled}");
-
-        // Remove Pin after PinDuration elapses
-        StartCoroutine(RemovePinDataAfter(PinDuration));
-    }
-
-    internal bool FindClosestTraderLocation(out ZoneSystem.LocationInstance closest)
-    {
-        closest = default;
-        bool result = false;
-   
-        Vector3 point = Player.m_localPlayer.transform.position;
-        float minDistance = float.MaxValue;
-        foreach (ZoneSystem.LocationInstance locationInstance in ZoneSystem.instance.m_locationInstances.Values)
-        {
-            float distance = Vector3.Distance(locationInstance.m_position, point);
-            if (TraderLocatonManager.IsTraderLocation(locationInstance.m_location) && distance < minDistance)
-            {
-                minDistance = distance;
-                closest = locationInstance;
-                result = true;
-            }
-        }
-        return result;
-    }
 
     /// <summary>
     ///     Check if cooldown since last read has elapsed.
     /// </summary>
     /// <returns></returns>
-    private bool CanReadMap()
+    public bool CanReadMap()
     {
-        if (TraderPinData is null)
+        if (LocationPinData is null)
         {
             return true;
         }
@@ -100,18 +36,54 @@ internal class TradeRouteMap : MonoBehaviour
     }
 
     /// <summary>
+    ///     Should always call CanReadMap to check if you should add a location pin.
+    /// </summary>
+    /// <param name="locationInstance"></param>
+    public void AddLocationPin(ZoneSystem.LocationInstance locationInstance)
+    {
+        if (!Player.m_localPlayer || !Minimap.instance || !InventoryGui.instance)
+        {
+            return;
+        }
+
+        if (LocationPinData is not null)
+        {
+            Minimap.instance.RemovePin(LocationPinData);
+        }
+
+        // Create pin with variable position and size
+        Vector3 pinPos = new( 
+            locationInstance.m_position.x + Random.Range(-1f*PositionVariance, PositionVariance),
+            locationInstance.m_position.y,
+            locationInstance.m_position.z + Random.Range(-1f*PositionVariance, PositionVariance)
+        );
+        LocationPinData = Minimap.instance.AddPin(pinPos, Minimap.PinType.EventArea, DefaultPinName, save: false, isChecked: false);
+        LocationPinData.m_worldSize = DefaultRadius + Random.Range(-1f*RadiusVariance, RadiusVariance); // want to add random noise to this
+
+        // Show Pin on the map
+        InventoryGui.instance.Hide();  // force close to prevent getting locked from input
+        Sprite sprite = Minimap.instance.GetSprite(Minimap.PinType.EventArea);
+        Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, $"$msg_pin_added: {DefaultPinName}", 0, sprite);
+        Minimap.instance.ShowPointOnMap(pinPos);
+
+        // Remove Pin after PinDuration elapses
+        StartCoroutine(RemovePinDataAfter(PinDuration));
+    }
+ 
+    /// <summary>
     ///     Coroutine to wait until UpdatPInTime has elapsed and
     ///     then remove the PinData.
     /// </summary>
     /// <returns></returns>
-    IEnumerator<object> RemovePinDataAfter(float seconds)
+    private IEnumerator<object> RemovePinDataAfter(float seconds)
     {
         Log.LogInfo($"Will remove pin in {seconds} seconds");
         yield return new WaitForSeconds(seconds);
               
-        if (TraderPinData != null && Minimap.instance)
+        if (LocationPinData != null && Minimap.instance)
         {
-            Minimap.instance.RemovePin(TraderPinData);
+            Minimap.instance.RemovePin(LocationPinData);
+            LocationPinData = null;
         }
         yield return null;
     }
