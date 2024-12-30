@@ -3,10 +3,12 @@ using System.Diagnostics;
 using HarmonyLib;
 using UnityEngine.SceneManagement;
 using SoftReferenceableAssets;
-using ShowMeTheGoods.Extensions;
-using Logging;
 using System;
 using System.IO;
+using UnityEngine;
+using Jotunn.Managers;
+using Logging;
+using ShowMeTheGoods.Extensions;
 
 
 namespace ShowMeTheGoods.Patches;
@@ -51,23 +53,10 @@ internal static class DetectTraderLocationPatches
 
             if (prefab.GetComponent<Trader>())
             {
-                TraderPrefabNameToAssetID.Add(prefab.name, default); 
+                var assetID = AssetManager.Instance.GetAssetID<GameObject>(prefab.name);
+                Log.LogInfo($"Found Trader: {prefab.name}, AssetID: {assetID}");
+                TraderPrefabNameToAssetID.Add(prefab.name, assetID);
             }
-        }
-
-        foreach (KeyValuePair<string, AssetID> item in Runtime.GetAllAssetPathsInBundleMappedToAssetID())
-        {
-            if (!item.Key.EndsWith(".prefab", StringComparison.Ordinal))
-            {
-                continue;
-            }
-            string prefabName = Path.GetFileNameWithoutExtension(item.Key);
-            if (!TraderPrefabNameToAssetID.ContainsKey(prefabName))
-            {
-                continue;
-            }
-            TraderPrefabNameToAssetID[prefabName] = item.Value;
-            Log.LogInfo($"Path: {item.Key}, AssetID: {item.Value}");
         }
         
         foreach (ZoneSystem.ZoneLocation zoneLocation in __instance.m_locations)
