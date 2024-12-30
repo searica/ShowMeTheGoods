@@ -59,6 +59,7 @@
 		<PackageReference Include="JotunnLib" Version="2.23.0" />
 	</ItemGroup>
 	<ItemGroup>
+		<Folder Include="Patches\" />
 		<Folder Include="Publish\Nexus\" />
 		<Folder Include="Publish\ThunderStore\" />
 	</ItemGroup>
