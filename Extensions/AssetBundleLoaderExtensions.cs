@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SoftReferenceableAssets;
 using Logging;
 
 namespace ShowMeTheGoods.Extensions;
 internal static class AssetBundleLoaderExtensions
 {
-    private static readonly Dictionary<BundleLoader, HashSet<AssetID>> _bundleLoaderToAssetIDsMap = []; 
+    private static readonly Dictionary<BundleLoader, HashSet<AssetID>> _bundleLoaderToAssetIDsMap = [];
     private static Dictionary<BundleLoader, HashSet<AssetID>> GetBundleLoaderToAssetIDDependeciesMap()
     {
         if (_bundleLoaderToAssetIDsMap.Count == 0)
@@ -39,11 +36,10 @@ internal static class AssetBundleLoaderExtensions
     {
         BundleLoader bundleLoader = assetBundleLoader.GetBundleLoaderFromAssetID(assetID);
         List<AssetID> dependencies = [];
-        var bundleToDependenciesMap = GetBundleLoaderToAssetIDDependeciesMap();
+        Dictionary<BundleLoader, HashSet<AssetID>> bundleToDependenciesMap = GetBundleLoaderToAssetIDDependeciesMap();
         foreach (int i in bundleLoader.m_bundleLoaderIndicesOfThisAndDependencies)
         {
-            BundleLoader loader = assetBundleLoader.m_bundleLoaders[i];
-            if (bundleToDependenciesMap.TryGetValue(loader, out HashSet<AssetID> assetIds))
+            if (bundleToDependenciesMap.TryGetValue(assetBundleLoader.m_bundleLoaders[i], out HashSet<AssetID> assetIds))
             {
                 dependencies.AddRange(assetIds);
             }            

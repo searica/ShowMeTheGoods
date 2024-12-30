@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
-using Logging;
+﻿using UnityEngine;
 
 namespace ShowMeTheGoods.Extensions;
 internal static class GameObjectExtensions
