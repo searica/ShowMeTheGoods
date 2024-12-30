@@ -10,31 +10,24 @@ namespace ShowMeTheGoods.Extensions;
 internal static class AssetBundleLoaderExtensions
 {
     private static readonly Dictionary<BundleLoader, HashSet<AssetID>> _bundleLoaderToAssetIDsMap = []; 
-    private static void ComputeBundleLoaderToAssetIDDepeneciesMap()
+    private static Dictionary<BundleLoader, HashSet<AssetID>> GetBundleLoaderToAssetIDDependeciesMap()
     {
-        foreach (AssetLoader assetLoader in AssetBundleLoader.Instance.m_assetLoaders)
+        if (_bundleLoaderToAssetIDsMap.Count == 0)
         {
-            var bundleLoader = AssetBundleLoader.Instance.GetBundleLoaderFromAssetID(assetLoader.m_assetID);
-            if (!_bundleLoaderToAssetIDsMap.TryGetValue(bundleLoader, out HashSet<AssetID> assetIDs))
+            foreach (AssetLoader assetLoader in AssetBundleLoader.Instance.m_assetLoaders)
             {
-                assetIDs = [];
-                _bundleLoaderToAssetIDsMap[bundleLoader] = assetIDs;
+                var bundleLoader = AssetBundleLoader.Instance.GetBundleLoaderFromAssetID(assetLoader.m_assetID);
+                if (!_bundleLoaderToAssetIDsMap.TryGetValue(bundleLoader, out HashSet<AssetID> assetIDs))
+                {
+                    assetIDs = [];
+                    _bundleLoaderToAssetIDsMap[bundleLoader] = assetIDs;
+                }
+                assetIDs.Add(assetLoader.m_assetID);
             }
-            assetIDs.Add(assetLoader.m_assetID);
         }
+        return _bundleLoaderToAssetIDsMap;
     }
 
-    private static Dictionary<BundleLoader, HashSet<AssetID>> BundleLoaderToAssetIDsMap
-    {
-        get
-        {
-            if (_bundleLoaderToAssetIDsMap.Count == 0)
-            {
-                ComputeBundleLoaderToAssetIDDepeneciesMap();
-            }
-            return _bundleLoaderToAssetIDsMap;
-        }
-    }
 
     internal static BundleLoader GetBundleLoaderFromAssetID(this AssetBundleLoader assetBundleLoader, AssetID assetID)
     {
@@ -46,10 +39,11 @@ internal static class AssetBundleLoaderExtensions
     {
         BundleLoader bundleLoader = assetBundleLoader.GetBundleLoaderFromAssetID(assetID);
         List<AssetID> dependencies = [];
+        var bundleToDependenciesMap = GetBundleLoaderToAssetIDDependeciesMap();
         foreach (int i in bundleLoader.m_bundleLoaderIndicesOfThisAndDependencies)
         {
             BundleLoader loader = assetBundleLoader.m_bundleLoaders[i];
-            if (BundleLoaderToAssetIDsMap.TryGetValue(loader, out HashSet<AssetID> assetIds))
+            if (bundleToDependenciesMap.TryGetValue(loader, out HashSet<AssetID> assetIds))
             {
                 dependencies.AddRange(assetIds);
             }            
