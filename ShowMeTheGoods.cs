@@ -116,7 +116,7 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
         // Start setting up a customized prefab to modify the appearance of the item
         GameObject mapPrefab = PrefabManager.Instance.CreateClonedPrefab("ShowMeTheGoods_TradeRouteMap", "DeerHide");
         mapPrefab.AddComponent<TradeRouteMap>();
-
+        
         // I need to customize a prefab here and use that in the constructor for traderMap
         // Change the texture or material of some kind of cloth?
         traderMap = new(mapPrefab, true, traderMapConfig);
