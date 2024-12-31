@@ -15,7 +15,7 @@ namespace ShowMeTheGoods;
 
 [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
 [BepInDependency(Jotunn.Main.ModGuid, Jotunn.Main.Version)]
-[NetworkCompatibility(CompatibilityLevel.VersionCheckOnly, VersionStrictness.Patch)]
+[NetworkCompatibility(CompatibilityLevel.ServerMustHaveMod, VersionStrictness.Patch)]
 [SynchronizationMode(AdminOnlyStrictness.IfOnServer)]
 internal sealed class ShowMeTheGoods : BaseUnityPlugin
 {
