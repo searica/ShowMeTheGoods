@@ -1,7 +1,11 @@
 # ShowMeTheGoods
-Adds an immersive way to get hints when searching for trader locations via purchasing a map from any trader you find
+Adds an immersive way to get hints when searching for trader locations via purchasing a map from any trader you find.
 
-Has a built-in file watcher so you can change configs by editing the config file on disk or via an in-game config manager.
+Because the server is what stores the locations of the traders, this mod must be installed on the server and it 
+will prevent you from connecting if you have it installed and it is not on the server.
+
+For managing configuration setting you can use an in-game configuration manager or 
+change configs by editing the config file on disk as this mod has a built in file watcher.
 
 ## Features
 You can buy a map from any trader in the game (including ones added by mods) that will give you 
