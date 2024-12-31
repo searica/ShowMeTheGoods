@@ -11,23 +11,8 @@ using Jotunn.Configs;
 using UnityEngine;
 using Jotunn.Entities;
 using ShowMeTheGoods.Core;
+using ShowMeTheGoods.Helpers;
 
-// To begin using: rename the solution and project, then find and replace all instances of "ShowMeTheGoods"
-// Next: rename the main plugin as desired.
-
-// If using Jotunn then the following files should be removed from Configs:
-// - ConfigManagerWatcher
-// - ConfigurationManagerAttributes
-// - SaveInvokeEvents
-// - ConfigFileExtensions should be editted to only include `DisableSaveOnConfigSet`
-
-// If not using Jotunn
-// - Remove the decorators on the MainPlugin
-// - Swap from using SynchronizationManager.OnConfigurationWindowClosed to using ConfigManagerWatcher.OnConfigurationWindowClosed
-// - Remove calls to SynchronizationManager.OnConfigurationSynchronized
-// - Adjust using statements as needed
-// - Remove nuget Jotunn package via manage nuget packages
-// - Uncomment the line: <Import Project="$(JotunnProps)" Condition="Exists('$(JotunnProps)')" /> in the csproj file
 
 namespace ShowMeTheGoods;
 
@@ -46,13 +31,10 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
     internal static ConfigFile ConfigFile;
     internal static ConfigFileWatcher ConfigFileWatcher;
 
-
     // Global settings
     internal const string GlobalSection = "Global";
     internal ConfigEntry<int> MapCost;
-    private const string TraderMapPrefabName = "ShowMeTheGoods_TradeRouteMap";
-    internal CustomItem traderMap;
-
+    
     public void Awake()
     {
         Instance = this;
@@ -67,23 +49,9 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
         Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGUID);
         Game.isModded = true;
 
-        // Re-initialization after reloading config and don't save since file was just reloaded
-        ConfigFileWatcher = new(Config);
-        ConfigFileWatcher.OnConfigFileReloaded += () =>
-        {
-            // do stuff
-        };
-
-        SynchronizationManager.OnConfigurationSynchronized += (obj, e) =>
-        {
-            // do stuff
-        };
-
-        SynchronizationManager.OnConfigurationWindowClosed += () =>
-        {
-            // do stuff
-        };
-
+        ConfigFileWatcher = new(Config);  // check for changes to the config file
+        
+        // add custom TradeRouteMap
         PrefabManager.OnVanillaPrefabsAvailable += AddCustomItems;
     }
 
@@ -97,68 +65,19 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
             synced: true,
             acceptableValues: new AcceptableValueRange<int>(1, 10000)
         );
-
+        MapCost.SettingChanged += (obj, e) =>
+        {
+            TradeRouteMapManager.UpdateTradeItemCost();
+        };
     }
 
     private void AddCustomItems()
     {
-        Log.LogInfo("Adding custom item");
-        // Create and add a custom item based on SwordBlackmetal
-        ItemConfig traderMapConfig = new()
-        {
-            Name = "Trade Route Map",
-            Description = "Map that helps to find possible trader locations.",
-            CraftingStation = CraftingStations.None,
-            Enabled = false, // make not craftable
-            StackSize = 1,
-            Weight = 1f
-        };
-
-        // Start setting up a customized prefab to modify the appearance of the item
-        GameObject mapPrefab = PrefabManager.Instance.CreateClonedPrefab(TraderMapPrefabName, "Iron");
-        mapPrefab.transform.localRotation = Quaternion.identity;
-        mapPrefab.AddComponent<TradeRouteMap>();
-
-        Transform modelPrefab = mapPrefab.transform.Find("model");
-        if (modelPrefab)  // Customize model size
-        {
-            modelPrefab.transform.localPosition = Vector3.zero;
-            modelPrefab.transform.localRotation = Quaternion.identity;
-            modelPrefab.transform.localScale = new Vector3(1.1f, 0.1f, 0.7f);
-        }
-
-        try  // Customize material
-        {
-            GameObject hildirMapTable = PrefabManager.Instance.GetPrefab("hildir_maptable");
-            MeshRenderer meshRenderer = modelPrefab.GetComponent<MeshRenderer>();
-            meshRenderer.sharedMaterial = hildirMapTable.GetComponentInChildren<MeshRenderer>().sharedMaterial;
-        }
-        catch
-        {
-            Log.LogWarning($"Failed to customize material of {TraderMapPrefabName}!");
-        }
-
-        try  // Customize item type
-        {
-            ItemDrop itemDrop = mapPrefab.GetComponent<ItemDrop>();
-            itemDrop.m_itemData.m_shared.m_itemType = ItemDrop.ItemData.ItemType.None;
-            itemDrop.m_itemData.m_shared.m_teleportable = true;
-        }
-        catch
-        {
-            Log.LogWarning($"Failed to customize item type of {TraderMapPrefabName}!");
-        }
-        
-      
-        // Create and add customized map
-        traderMap = new(mapPrefab, true, traderMapConfig);
-        ItemManager.Instance.AddItem(traderMap);
-
-        // You want that to run only once, Jotunn has the item cached for the game session
+        Log.LogInfo("Adding TradeRouteMap", Log.InfoLevel.Medium);
+        ItemManager.Instance.AddItem(TradeRouteMapManager.GetTradeRouteMapCustomItem());
+        // Only want this to run once, Jotunn has the item cached for the game session
         PrefabManager.OnVanillaPrefabsAvailable -= AddCustomItems;
     }
-
-    // will need to patch Humanoid.UseItem to add trader locating functionality
 
     public void OnDestroy()
     {
