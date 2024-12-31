@@ -7,6 +7,7 @@ using HarmonyLib;
 using Jotunn.Managers;
 using Logging;
 using ShowMeTheGoods.Extensions;
+using static Mono.Security.X509.X520;
 
 
 namespace ShowMeTheGoods.Core;
@@ -14,8 +15,9 @@ namespace ShowMeTheGoods.Core;
 [HarmonyPatch]
 internal sealed class TraderLocationManager
 {
-    
+    private readonly HashSet<string> TraderLocationNames = [];
     private readonly Dictionary<string, bool> IsTraderLocationMap = [];
+    private readonly Dictionary<string, bool> IsTraderLocationUniqueMap = [];
     private readonly Dictionary<string, AssetID> TraderPrefabNameToAssetID = [];
     private GameObject gameObject;
     private TradeRouteMap TraderRouteMap;
@@ -28,7 +30,8 @@ internal sealed class TraderLocationManager
     }
 
     /// <summary>
-    ///     Scan locations to see which depend on the trader prefab assets
+    ///     Initialize this manager by saanning assets and bundles to determine which locations
+    ///     depend on one the Trader's AssetIDs
     /// </summary>
     /// <param name="__instance"></param>
     [HarmonyPostfix]
@@ -60,14 +63,16 @@ internal sealed class TraderLocationManager
             if (prefab.GetComponent<Trader>())
             {
                 AssetID assetID = AssetManager.Instance.GetAssetID<GameObject>(prefab.name);
-                Log.LogInfo($"Found Trader: {prefab.name}, AssetID: {assetID}");
+                Log.LogInfo($"Found Trader: {prefab.name}, AssetID: {assetID}", Log.InfoLevel.Medium);
                 Instance.TraderPrefabNameToAssetID.Add(prefab.name, assetID);
             }
         }
 
         foreach (ZoneSystem.ZoneLocation zoneLocation in __instance.m_locations)
         {
-            if (!zoneLocation.m_enable || Instance.IsTraderLocationMap.ContainsKey(zoneLocation.m_prefabName))
+            if (!zoneLocation.m_enable || 
+                Instance.IsTraderLocationMap.ContainsKey(zoneLocation.m_prefabName) || 
+                Instance.TraderLocationNames.Contains(zoneLocation.m_prefabName))
             {
                 continue;
             }
@@ -79,7 +84,10 @@ internal sealed class TraderLocationManager
                 if (dependencies.Contains(item.Value))
                 {
                     Instance.IsTraderLocationMap[zoneLocation.m_prefabName] = true;
-                    Log.LogInfo($"Location: {zoneLocation.m_prefabName} has Trader: {item.Key}");
+                    Instance.TraderLocationNames.Add(zoneLocation.m_prefabName);
+                    Instance.IsTraderLocationUniqueMap[zoneLocation.m_prefabName] = zoneLocation.m_unique;
+                    string isUniqueText = zoneLocation.m_unique ? "is Unique" : "is Not Unique";
+                    Log.LogInfo($"Location: {zoneLocation.m_prefabName} has Trader: {item.Key} and {isUniqueText}", Log.InfoLevel.Medium);
                     break;
                 }
             }
@@ -89,23 +97,31 @@ internal sealed class TraderLocationManager
     }
 
 
+    /// <summary>
+    ///     Patch to detect when a player uses a trade route map from their inventory.
+    /// </summary>
+    /// <param name="__instance"></param>
+    /// <param name="item"></param>
+    /// <param name="fromInventoryGui"></param>
     [HarmonyPostfix]
     [HarmonyPatch(typeof(Humanoid), nameof(Player.UseItem))]
     private static void UseTradeRouteMap(Player __instance, ItemDrop.ItemData item, bool fromInventoryGui)
     {
-        Log.LogInfo("Plyer.UseItem postfix!");
         if (!__instance || !fromInventoryGui || item is null || item.m_shared is null || !item.m_dropPrefab)
         {
             return;
         }
 
-        if (!item.m_dropPrefab.GetComponent<TradeRouteMap>())
+        if (item.m_dropPrefab.GetComponent<TradeRouteMap>())
         {
-            return;
+            Instance.PinClosestUndiscoveredTrader();
         }
-        Instance.PinClosestUndiscoveredTrader();
     }
 
+
+    /// <summary>
+    ///     Pin the closest undiscovereed trader on the map if one exists.
+    /// </summary>
     private void PinClosestUndiscoveredTrader()
     {
         if (!Instance.TraderRouteMap.CanReadMap())
@@ -113,55 +129,136 @@ internal sealed class TraderLocationManager
             return;
         }
 
-        if (Instance.FindClosestTraderLocation(out ZoneSystem.LocationInstance closest))
+        if (FindClosestUndiscoveredTraderLocation(out ZoneSystem.LocationInstance closest))
         {
-            Log.LogInfo($"Closest Trader Location: {closest.m_location.m_prefabName}");
             Instance.TraderRouteMap.AddLocationPin(closest);
+        }
+        else if (Player.m_localPlayer)
+        {
+            Player.m_localPlayer.Message(MessageHud.MessageType.Center, "You have found all the traders!");
         }
     }
 
-    private bool HasBeenDiscovered(ZoneSystem.ZoneLocation zoneLocation)
-    {
-        // find if any of the existing trader locations have been had any instances of them be discovered
-        return false;
-    }
 
-    private bool FindClosestTraderLocation(out ZoneSystem.LocationInstance closest)
+    /// <summary>
+    ///     Find closest Trader LocationInstance that has not been discovered and has not
+    ///     had a different instance discovered if it is meant to be a unique location.
+    /// </summary>
+    /// <param name="closest"></param>
+    /// <returns></returns>
+    private bool FindClosestUndiscoveredTraderLocation(out ZoneSystem.LocationInstance closest)
     {
+        Dictionary<string, List<ZoneSystem.LocationInstance>> traderLocationInstances = Instance.GetTraderLocationInstances();
+
         closest = default;
         bool result = false;
-
-        Vector3 point = Player.m_localPlayer.transform.position;
         float minDistance = float.MaxValue;
+        foreach (KeyValuePair<string, List<ZoneSystem.LocationInstance>> item in traderLocationInstances)
+        {
+            bool isUniqueLocation = IsTraderLocationUniqueMap[item.Key];
+            bool foundUndiscoveredLocation = Instance.FindClosestUndiscoveredLocationInList(
+                isUniqueLocation,
+                item.Value,
+                out float distance,
+                out ZoneSystem.LocationInstance closestLocationInstance
+            );
+            Log.LogInfo($"{item.Key} has undiscovered location: {foundUndiscoveredLocation}", Log.InfoLevel.Medium);
+
+            if (foundUndiscoveredLocation && distance < minDistance)
+            {
+                minDistance = distance;
+                closest = closestLocationInstance;
+                result = true;   
+            }
+        }
+        return result;
+    }
+
+
+    /// <summary>
+    ///     Get map of trader location prefab names to location instances.
+    /// </summary>
+    /// <returns></returns>
+    private Dictionary<string, List<ZoneSystem.LocationInstance>> GetTraderLocationInstances()
+    {
+        Dictionary<string, List<ZoneSystem.LocationInstance>> traderLocationInstances = [];
+        foreach (string name in Instance.TraderLocationNames)
+        {
+            traderLocationInstances.Add(name, []);
+        }
+
         foreach (ZoneSystem.LocationInstance locationInstance in ZoneSystem.instance.m_locationInstances.Values)
         {
+            string locationName = locationInstance.m_location.m_prefabName;
+            
+            if (traderLocationInstances.ContainsKey(locationName))
+            {
+                traderLocationInstances[locationName].Add(locationInstance);
+            }
+        }
+
+        foreach (string locationName in Instance.TraderLocationNames)
+        {
+            int nLocations = traderLocationInstances[locationName].Count;
+            Log.LogInfo($"{locationName} has {nLocations} Location Instances", Log.InfoLevel.Medium);
+        }
+
+        return traderLocationInstances;
+    }
+
+
+    /// <summary>
+    ///     Find closest undiscovered location.
+    /// </summary>
+    /// <param name="isUniqueLocation">Whether all location instances are meant to be the same unique location.</param>
+    /// <param name="locationInstances"></param>
+    /// <param name="minDistance"></param>
+    /// <param name="closest"></param>
+    /// <returns></returns>
+    private bool FindClosestUndiscoveredLocationInList(
+        bool isUniqueLocation, 
+        List<ZoneSystem.LocationInstance> locationInstances, 
+        out float minDistance, 
+        out ZoneSystem.LocationInstance closest
+    )
+    {
+        closest = default;
+        minDistance = float.MaxValue;
+        bool result = false;
+        Vector3 point = Player.m_localPlayer.transform.position;
+
+        foreach (ZoneSystem.LocationInstance locationInstance in locationInstances)
+        {
+            if (Instance.HasLocationInstanceBeenDiscovered(locationInstance))
+            {
+                // end search and say it failed if these locations are unique and have already been discoverd.
+                if (isUniqueLocation)
+                {
+                    Log.LogInfo($"Location {locationInstance.m_location.m_prefabName} is Unique and has already been discovered");
+                    return false;
+                }
+                continue;  // don't check if this instance already discovered
+            }
+
             float distance = Vector3.Distance(locationInstance.m_position, point);
-            if (Instance.IsTraderLocation(locationInstance.m_location) && distance < minDistance)
+            if (distance < minDistance)
             {
                 minDistance = distance;
                 closest = locationInstance;
                 result = true;
             }
         }
+
         return result;
     }
 
-    private bool IsTraderLocation(ZoneSystem.LocationInstance locationInstance)
+    /// <summary>
+    ///     Checks if the location has been pinned on the map already.
+    /// </summary>
+    /// <param name="locationInstance"></param>
+    /// <returns></returns>
+    private bool HasLocationInstanceBeenDiscovered(ZoneSystem.LocationInstance locationInstance)
     {
-        return IsTraderLocation(locationInstance.m_location);
-    }
-
-    private bool IsTraderLocation(ZoneSystem.ZoneLocation zoneLocation)
-    {
-        if (!IsValid())
-        {
-            return false;
-        }
-
-        if (!IsTraderLocationMap.TryGetValue(zoneLocation.m_prefabName, out bool result))
-        {
-            result = false;
-        }
-        return result;
+        return locationInstance.m_location.m_iconAlways || (locationInstance.m_location.m_iconPlaced && locationInstance.m_placed);
     }
 }

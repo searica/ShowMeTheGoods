@@ -10,11 +10,11 @@ namespace ShowMeTheGoods.Core;
 /// </summary>
 internal class TradeRouteMap : MonoBehaviour
 {
-    private const float PinDuration = 10f; // seconds
+    private const float PinDuration = 300f; // seconds
     private Minimap.PinData LocationPinData;
     private const float DefaultRadius = 1500f;
     private const float RadiusVariance = 300f;
-    private const float PositionVariance = RadiusVariance / 2f;
+    private const float RadialVariance = 0.9f;  // as a fraction of the variable radius
     private const string DefaultPinName = "Trader?";
 
     /// <summary>
@@ -51,14 +51,24 @@ internal class TradeRouteMap : MonoBehaviour
             Minimap.instance.RemovePin(LocationPinData);
         }
 
-        // Create pin with variable position and size
-        Vector3 pinPos = new( 
-            locationInstance.m_position.x + Random.Range(-1f*PositionVariance, PositionVariance),
+        // Get random radius of pin area.
+        float areaRadius = DefaultRadius + Random.Range(-1f * RadiusVariance, RadiusVariance);
+
+        // Compute variance in pin position via radial coordiantes to ensure the actual
+        // trader location could be anywhere within the pin area.
+        float posRadialVariance = Random.Range(0f, areaRadius * RadialVariance);
+        float posThetaVariance = Random.Range(0f, 2f * Mathf.PI);
+        float posXVariance = posRadialVariance * Mathf.Cos(posThetaVariance);
+        float posZVariance = posRadialVariance * Mathf.Sin(posThetaVariance);
+
+        // Create and modify pin
+        Vector3 pinPos = new(
+            locationInstance.m_position.x + posXVariance,
             locationInstance.m_position.y,
-            locationInstance.m_position.z + Random.Range(-1f*PositionVariance, PositionVariance)
+            locationInstance.m_position.z + posZVariance
         );
         LocationPinData = Minimap.instance.AddPin(pinPos, Minimap.PinType.EventArea, DefaultPinName, save: false, isChecked: false);
-        LocationPinData.m_worldSize = DefaultRadius + Random.Range(-1f*RadiusVariance, RadiusVariance); // want to add random noise to this
+        LocationPinData.m_worldSize = areaRadius * 2f;
 
         // Show Pin on the map
         InventoryGui.instance.Hide();  // force close to prevent getting locked from input
@@ -77,7 +87,7 @@ internal class TradeRouteMap : MonoBehaviour
     /// <returns></returns>
     private IEnumerator<object> RemovePinDataAfter(float seconds)
     {
-        Log.LogInfo($"Will remove pin in {seconds} seconds");
+        Log.LogDebug($"Will remove pin in {seconds} seconds");
         yield return new WaitForSeconds(seconds);
               
         if (LocationPinData != null && Minimap.instance)
