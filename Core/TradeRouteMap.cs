@@ -90,9 +90,12 @@ internal class TradeRouteMap : MonoBehaviour
         Log.LogDebug($"Will remove pin in {seconds} seconds");
         yield return new WaitForSeconds(seconds);
               
-        if (LocationPinData != null && Minimap.instance)
+        if (LocationPinData is not null)
         {
-            Minimap.instance.RemovePin(LocationPinData);
+            if (Minimap.instance)
+            {
+                Minimap.instance.RemovePin(LocationPinData);
+            }
             LocationPinData = null;
         }
         yield return null;

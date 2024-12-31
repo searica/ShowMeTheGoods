@@ -13,6 +13,7 @@
 				<ul>
 					<li>Fixed issue where clients could not detect all possible trader locations when searching for them.</li>
 					<li>Made mod required on server (needed to fix the above issue).</li>
+					<li>Fixed possibly being unable to read trade route map if you logged out and back in while the hint was showing.</li>
 				</ul>
 			</td>
 		</tr>
