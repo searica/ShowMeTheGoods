@@ -30,7 +30,7 @@ internal sealed class TraderLocationManager
     }
 
     /// <summary>
-    ///     Initialize this manager by saanning assets and bundles to determine which locations
+    ///     Initialize this manager by scanning assets and bundles to determine which locations
     ///     depend on one the Trader's AssetIDs
     /// </summary>
     /// <param name="__instance"></param>
