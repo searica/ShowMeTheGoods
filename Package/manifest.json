@@ -1,7 +1,7 @@
 {
   "name": "ShowMeTheGoods",
   "author": "Searica",
-  "version_number": "0.1.0",
+  "version_number": "0.2.0",
   "website_url": "https://discord.gg/sFmGTBYN6n",
   "description": "Adds an immersive way to get hints when searching for trader locations via purchasing a map from any trader you find.",
   "dependencies": [
