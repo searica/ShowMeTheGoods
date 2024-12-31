@@ -7,11 +7,8 @@ using Jotunn.Managers;
 using Jotunn.Extensions;
 using Configs;
 using Logging;
-using Jotunn.Configs;
-using UnityEngine;
-using Jotunn.Entities;
 using ShowMeTheGoods.Core;
-using ShowMeTheGoods.Helpers;
+
 
 
 namespace ShowMeTheGoods;
