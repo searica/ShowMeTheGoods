@@ -50,6 +50,7 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
     // Global settings
     internal const string GlobalSection = "Global";
     internal ConfigEntry<int> MapCost;
+    private const string TraderMapPrefabName = "ShowMeTheGoods_TradeRouteMap";
     internal CustomItem traderMap;
 
     public void Awake()
@@ -114,13 +115,43 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
         };
 
         // Start setting up a customized prefab to modify the appearance of the item
-        GameObject mapPrefab = PrefabManager.Instance.CreateClonedPrefab("ShowMeTheGoods_TradeRouteMap", "DeerHide");
+        GameObject mapPrefab = PrefabManager.Instance.CreateClonedPrefab(TraderMapPrefabName, "Iron");
+        mapPrefab.transform.localRotation = Quaternion.identity;
         mapPrefab.AddComponent<TradeRouteMap>();
-        
-        // I need to customize a prefab here and use that in the constructor for traderMap
-        // Change the texture or material of some kind of cloth?
-        traderMap = new(mapPrefab, true, traderMapConfig);
 
+        Transform modelPrefab = mapPrefab.transform.Find("model");
+        if (modelPrefab)  // Customize model size
+        {
+            modelPrefab.transform.localPosition = Vector3.zero;
+            modelPrefab.transform.localRotation = Quaternion.identity;
+            modelPrefab.transform.localScale = new Vector3(1.1f, 0.1f, 0.7f);
+        }
+
+        try  // Customize material
+        {
+            GameObject hildirMapTable = PrefabManager.Instance.GetPrefab("hildir_maptable");
+            MeshRenderer meshRenderer = modelPrefab.GetComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = hildirMapTable.GetComponentInChildren<MeshRenderer>().sharedMaterial;
+        }
+        catch
+        {
+            Log.LogWarning($"Failed to customize material of {TraderMapPrefabName}!");
+        }
+
+        try  // Customize item type
+        {
+            ItemDrop itemDrop = mapPrefab.GetComponent<ItemDrop>();
+            itemDrop.m_itemData.m_shared.m_itemType = ItemDrop.ItemData.ItemType.None;
+            itemDrop.m_itemData.m_shared.m_teleportable = true;
+        }
+        catch
+        {
+            Log.LogWarning($"Failed to customize item type of {TraderMapPrefabName}!");
+        }
+        
+      
+        // Create and add customized map
+        traderMap = new(mapPrefab, true, traderMapConfig);
         ItemManager.Instance.AddItem(traderMap);
 
         // You want that to run only once, Jotunn has the item cached for the game session
