@@ -94,8 +94,82 @@ internal sealed class TraderLocationManager
         }
         stopwatch.Stop();
         Log.LogInfo($"Time to search for trader locations: {stopwatch.ElapsedMilliseconds} ms");
+
+        if (!ZNet.instance.IsServer())
+        {
+            ZRoutedRpc.instance.Register<ZPackage>("TraderLocations", TraderLocationManager.Instance.RPC_TraderLocations);
+        }
     }
 
+
+    /// <summary>
+    ///     Get and send trader locations whenever sending location icons.
+    ///     This only runs on the server which should keep all 
+    ///     location instances loaded.
+    /// </summary>
+    /// <param name="__instance"></param>
+    /// <param name="peer"></param>
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.SendLocationIcons))]
+    private static void SendTraderLocations(ZoneSystem __instance, long peer)
+    {
+        if (!ZNet.instance.IsServer())
+        {
+            return;
+        }
+        ZPackage zPackage = new ZPackage();
+        Dictionary<string, List<ZoneSystem.LocationInstance>> traderLocations = TraderLocationManager.Instance.GetTraderLocationInstances();
+        zPackage.Write(traderLocations.Keys.Count);
+        foreach (KeyValuePair<string, List<ZoneSystem.LocationInstance>> item in traderLocations)
+        {
+            zPackage.Write(item.Key);
+            zPackage.Write(item.Value.Count);
+            foreach (ZoneSystem.LocationInstance location in item.Value)
+            {
+                zPackage.Write(location.m_location.m_prefabName);
+                zPackage.Write(location.m_position.x);
+                zPackage.Write(location.m_position.y);
+                zPackage.Write(location.m_position.z);
+                zPackage.Write(location.m_placed);
+            }
+        }
+        ZRoutedRpc.instance.InvokeRoutedRPC(peer, "TraderLocations", zPackage);
+    }
+
+    /// <summary>
+    ///     Recieve and register trader locations sent from SendTraderLocations patch as Location Instances.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="pkg"></param>
+    private void RPC_TraderLocations(long sender, ZPackage pkg)
+    {
+        Log.LogInfo("Client recived trader locations.");
+        int numUniqueTraderLocations = pkg.ReadInt();
+        for (int i = 0; i < numUniqueTraderLocations; i++)
+        {
+            string locationName = pkg.ReadString();
+            int numInstances = pkg.ReadInt();
+            Log.LogInfo($"Parsing {numInstances} instances of location: {locationName}");
+            for (int j = 0; j < numInstances; j++)
+            {
+                string text = pkg.ReadString();
+                Vector3 zero = Vector3.zero;
+                zero.x = pkg.ReadSingle();
+                zero.y = pkg.ReadSingle();
+                zero.z = pkg.ReadSingle();
+                bool generated = pkg.ReadBool();
+                ZoneSystem.ZoneLocation location = ZoneSystem.instance.GetLocation(text);
+                if (location is not null)
+                {
+                    ZoneSystem.instance.RegisterLocation(location, zero, generated);
+                }
+                else
+                {
+                    Log.LogDebug($"Failed to find instance {j + 1} of location {locationName}");
+                }
+            }
+        }
+    }
 
     /// <summary>
     ///     Patch to detect when a player uses a trade route map from their inventory.
