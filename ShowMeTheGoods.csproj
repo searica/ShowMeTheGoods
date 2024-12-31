@@ -47,10 +47,13 @@
 	<ItemGroup>
 		<Compile Remove="NewFolder1\**" />
 		<Compile Remove="Package\plugins\**" />
+		<Compile Remove="Patches\**" />
 		<EmbeddedResource Remove="NewFolder1\**" />
 		<EmbeddedResource Remove="Package\plugins\**" />
+		<EmbeddedResource Remove="Patches\**" />
 		<None Remove="NewFolder1\**" />
 		<None Remove="Package\plugins\**" />
+		<None Remove="Patches\**" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="Package\icon.png" />
@@ -59,7 +62,6 @@
 		<PackageReference Include="JotunnLib" Version="2.23.0" />
 	</ItemGroup>
 	<ItemGroup>
-		<Folder Include="Patches\" />
 		<Folder Include="Publish\Nexus\" />
 		<Folder Include="Publish\ThunderStore\" />
 	</ItemGroup>
