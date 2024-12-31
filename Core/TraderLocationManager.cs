@@ -143,13 +143,13 @@ internal sealed class TraderLocationManager
     /// <param name="pkg"></param>
     private void RPC_TraderLocations(long sender, ZPackage pkg)
     {
-        Log.LogInfo("Client recived trader locations.");
+        Log.LogInfo("Client received trader locations.");
         int numUniqueTraderLocations = pkg.ReadInt();
         for (int i = 0; i < numUniqueTraderLocations; i++)
         {
             string locationName = pkg.ReadString();
             int numInstances = pkg.ReadInt();
-            Log.LogInfo($"Parsing {numInstances} instances of location: {locationName}");
+            Log.LogInfo($"Parsing {numInstances} instances of location: {locationName}", Log.InfoLevel.Medium);
             for (int j = 0; j < numInstances; j++)
             {
                 string text = pkg.ReadString();
@@ -165,7 +165,7 @@ internal sealed class TraderLocationManager
                 }
                 else
                 {
-                    Log.LogDebug($"Failed to find instance {j + 1} of location {locationName}");
+                    Log.LogInfo($"Failed to find instance {j + 1} of location {locationName}", Log.InfoLevel.Medium);
                 }
             }
         }
