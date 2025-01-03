@@ -153,15 +153,15 @@ internal sealed class TraderLocationManager
             for (int j = 0; j < numInstances; j++)
             {
                 string text = pkg.ReadString();
-                Vector3 zero = Vector3.zero;
-                zero.x = pkg.ReadSingle();
-                zero.y = pkg.ReadSingle();
-                zero.z = pkg.ReadSingle();
+                Vector3 position = Vector3.zero;
+                position.x = pkg.ReadSingle();
+                position.y = pkg.ReadSingle();
+                position.z = pkg.ReadSingle();
                 bool generated = pkg.ReadBool();
                 ZoneSystem.ZoneLocation location = ZoneSystem.instance.GetLocation(text);
                 if (location is not null)
                 {
-                    ZoneSystem.instance.RegisterLocation(location, zero, generated);
+                    ZoneSystem.instance.RegisterLocation(location, position, generated);
                 }
                 else
                 {
