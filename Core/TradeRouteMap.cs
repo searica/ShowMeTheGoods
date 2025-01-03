@@ -30,7 +30,7 @@ internal class TradeRouteMap : MonoBehaviour
     /// <returns></returns>
     public bool CanReadMap()
     {
-        if (LocationPinData is null)
+        if (LocationPinData is null && ZoneSystem.instance && ZoneSystem.instance.LocationsGenerated)
         {
             return true;
         }
