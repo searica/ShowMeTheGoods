@@ -268,6 +268,7 @@ internal sealed class TraderLocationManager
             if (traderLocationInstances.ContainsKey(locationName))
             {
                 traderLocationInstances[locationName].Add(locationInstance);
+                Log.LogInfo($"Location Instance for {locationName} is placed: {locationInstance.m_placed}");
             }
         }
 
