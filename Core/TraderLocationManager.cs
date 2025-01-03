@@ -283,7 +283,7 @@ internal sealed class TraderLocationManager
 
 
     /// <summary>
-    ///     Find closest undiscovered location.
+    ///     Find closest undiscovered location from list.
     /// </summary>
     /// <param name="isUniqueLocation">Whether all location instances are meant to be the same unique location.</param>
     /// <param name="locationInstances"></param>
