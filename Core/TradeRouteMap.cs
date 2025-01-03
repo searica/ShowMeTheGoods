@@ -10,12 +10,19 @@ namespace ShowMeTheGoods.Core;
 /// </summary>
 internal class TradeRouteMap : MonoBehaviour
 {
-    private const float PinDuration = 300f; // seconds
-    private Minimap.PinData LocationPinData;
+#if DEBUG
+    private const float PinDuration = 10f; // seconds
+    private const float DefaultRadius = 100f;
+    private const float RadiusVariance = 10f;
+    private const float RadialVariance = 0.9f;  // as a fraction of the variable radius
+#else
+    private const float PinDuration = 300f; // 
     private const float DefaultRadius = 1500f;
     private const float RadiusVariance = 300f;
     private const float RadialVariance = 0.9f;  // as a fraction of the variable radius
+#endif
     private const string DefaultPinName = "Trader?";
+    private Minimap.PinData LocationPinData;
 
     /// <summary>
     ///     Check if cooldown since last read has elapsed.
