@@ -9,8 +9,6 @@ using Configs;
 using Logging;
 using ShowMeTheGoods.Core;
 
-
-
 namespace ShowMeTheGoods;
 
 [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
@@ -22,7 +20,7 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
     public const string PluginName = "ShowMeTheGoods";
     internal const string Author = "Searica";
     public const string PluginGUID = $"{Author}.Valheim.{PluginName}";
-    public const string PluginVersion = "0.2.0";
+    public const string PluginVersion = "0.2.1";
 
     internal static ShowMeTheGoods Instance;
     internal static ConfigFile ConfigFile;

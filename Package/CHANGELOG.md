@@ -8,6 +8,14 @@
 			<th align="center">Notes</th>
 		</tr>
 		<tr>
+			<td align="center">0.2.1</td>
+			<td align="left">
+				<ul>
+					<li>Prevent reading the map before locations are finished generating, should hopefully fix issue with sometimes thinking that all traders have been found when they haven't.</li>
+				</ul>
+			</td>
+		</tr>
+		<tr>
 			<td align="center">0.2.0</td>
 			<td align="left">
 				<ul>
