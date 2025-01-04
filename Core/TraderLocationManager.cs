@@ -71,26 +71,36 @@ internal sealed class TraderLocationManager
         foreach (ZoneSystem.ZoneLocation zoneLocation in __instance.m_locations)
         {
             if (!zoneLocation.m_enable || 
+                string.IsNullOrEmpty(zoneLocation.m_prefabName) ||
                 Instance.IsTraderLocationMap.ContainsKey(zoneLocation.m_prefabName) || 
                 Instance.TraderLocationNames.Contains(zoneLocation.m_prefabName))
             {
                 continue;
             }
-            Instance.IsTraderLocationMap[zoneLocation.m_prefabName] = false;
 
-            HashSet<AssetID> dependencies = AssetBundleLoader.Instance.GetDependenciesFromAssetID(zoneLocation.m_prefab.m_assetID);
-            foreach (KeyValuePair<string, AssetID> item in Instance.TraderPrefabNameToAssetID)
+            try
             {
-                if (dependencies.Contains(item.Value))
+                Instance.IsTraderLocationMap[zoneLocation.m_prefabName] = false;
+
+                HashSet<AssetID> dependencies = AssetBundleLoader.Instance.GetDependenciesFromAssetID(zoneLocation.m_prefab.m_assetID);
+                foreach (KeyValuePair<string, AssetID> item in Instance.TraderPrefabNameToAssetID)
                 {
-                    Instance.IsTraderLocationMap[zoneLocation.m_prefabName] = true;
-                    Instance.TraderLocationNames.Add(zoneLocation.m_prefabName);
-                    Instance.IsTraderLocationUniqueMap[zoneLocation.m_prefabName] = zoneLocation.m_unique;
-                    string isUniqueText = zoneLocation.m_unique ? "is Unique" : "is Not Unique";
-                    Log.LogInfo($"Location: {zoneLocation.m_prefabName} has Trader: {item.Key} and {isUniqueText}", Log.InfoLevel.Medium);
-                    break;
+                    if (dependencies.Contains(item.Value))
+                    {
+                        Instance.IsTraderLocationMap[zoneLocation.m_prefabName] = true;
+                        Instance.TraderLocationNames.Add(zoneLocation.m_prefabName);
+                        Instance.IsTraderLocationUniqueMap[zoneLocation.m_prefabName] = zoneLocation.m_unique;
+                        string isUniqueText = zoneLocation.m_unique ? "is Unique" : "is Not Unique";
+                        Log.LogInfo($"Location: {zoneLocation.m_prefabName} has Trader: {item.Key} and {isUniqueText}", Log.InfoLevel.Medium);
+                        break;
+                    }
                 }
             }
+            catch
+            {
+                Log.LogError($"Failed to scan location: {zoneLocation.m_prefabName}");
+            }
+            
         }
         stopwatch.Stop();
         Log.LogInfo($"Time to search for trader locations: {stopwatch.ElapsedMilliseconds} ms");

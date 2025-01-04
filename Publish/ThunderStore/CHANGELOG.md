@@ -8,6 +8,14 @@
 			<th align="center">Notes</th>
 		</tr>
 		<tr>
+			<td align="center">0.2.2</td>
+			<td align="left">
+				<ul>
+					<li>Added error handling for when other mods enable locations that have missing or invalid prefab names.</li>
+				</ul>
+			</td>
+		</tr>
+		<tr>
 			<td align="center">0.2.1</td>
 			<td align="left">
 				<ul>
