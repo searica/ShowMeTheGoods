@@ -55,7 +55,9 @@ internal sealed class TraderLocationManager
         Stopwatch stopwatch = Stopwatch.StartNew();
         foreach (GameObject prefab in ZNetScene.instance.m_prefabs)
         {
-            if (!prefab || !prefab.IsRootPrefab() || Instance.TraderPrefabNameToAssetID.ContainsKey(prefab.name))
+            // skip checking if it is a root prefab since location prefabs added by Jotunn have
+            // PrefabManager.Instance.PrefabContainer as a parent, (!prefab.IsRootPrefab())
+            if (!prefab || Instance.TraderPrefabNameToAssetID.ContainsKey(prefab.name))
             {
                 continue;
             }
