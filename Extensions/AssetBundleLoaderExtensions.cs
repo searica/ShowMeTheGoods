@@ -25,7 +25,12 @@ internal static class AssetBundleLoaderExtensions
         return _bundleLoaderToAssetIDsMap;
     }
 
-
+    /// <summary>
+    ///     Get the BundleLoader for this AssetID by getting the AssetLoader and then using it's bundleLoaderIndex
+    /// </summary>
+    /// <param name="assetBundleLoader"></param>
+    /// <param name="assetID"></param>
+    /// <returns></returns>
     internal static BundleLoader GetBundleLoaderFromAssetID(this AssetBundleLoader assetBundleLoader, AssetID assetID)
     {
         var assetLoader = assetBundleLoader.GetLoader(assetID);
