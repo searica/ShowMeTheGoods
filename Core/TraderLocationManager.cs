@@ -15,14 +15,27 @@ namespace ShowMeTheGoods.Core;
 [HarmonyPatch]
 internal sealed class TraderLocationManager
 {
-    private readonly HashSet<string> TraderLocationNames = [];
-    private readonly Dictionary<string, bool> IsTraderLocationMap = [];
-    private readonly Dictionary<string, bool> IsTraderLocationUniqueMap = [];
-    private readonly Dictionary<string, AssetID> TraderPrefabNameToAssetID = [];
+    //private readonly Dictionary<string, AssetID> TraderPrefabNameToAssetID = [];
+
+    private readonly Dictionary<string, LocationTraderInfo> LocationTraderInfoMap = new()
+    {
+        {"Vendor_BlackForest", new() {IsUnique = true, IsTraderLocation = true } },
+        {"Hildir_camp", new() {IsUnique = true, IsTraderLocation = true } },
+        {"BogWitch_Camp", new() {IsUnique = true, IsTraderLocation = true } },
+    };
+
+    private readonly HashSet<string> TraderLocationNames = ["Vendor_BlackForest", "Hildir_camp", "BogWitch_Camp"];
+
     private GameObject gameObject;
     private TradeRouteMap TraderRouteMap;
     public static TraderLocationManager Instance;
     private static bool HasInit = false;
+
+    private class LocationTraderInfo
+    {
+        public bool IsUnique;
+        public bool IsTraderLocation;
+    }
 
     private static bool IsValid()
     {
@@ -51,61 +64,63 @@ internal sealed class TraderLocationManager
             GameObject.DontDestroyOnLoad(Instance.gameObject);
             HasInit = true;
         }
+        
+        // Just uses the fixed trader location names now due to changes in asset bundles
 
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        foreach (GameObject prefab in ZNetScene.instance.m_prefabs)
-        {
-            // skip checking if it is a root prefab since location prefabs added by Jotunn have
-            // PrefabManager.Instance.PrefabContainer as a parent, (!prefab.IsRootPrefab())
-            if (!prefab || Instance.TraderPrefabNameToAssetID.ContainsKey(prefab.name))
-            {
-                continue;
-            }
+        //Stopwatch stopwatch = Stopwatch.StartNew();
+        //foreach (GameObject prefab in ZNetScene.instance.m_prefabs)
+        //{
+        //    // skip checking if it is a root prefab since location prefabs added by Jotunn have
+        //    // PrefabManager.Instance.PrefabContainer as a parent, (!prefab.IsRootPrefab())
+        //    if (!prefab || Instance.TraderPrefabNameToAssetID.ContainsKey(prefab.name))
+        //    {
+        //        continue;
+        //    }
 
-            if (prefab.GetComponent<Trader>())
-            {
-                AssetID assetID = AssetManager.Instance.GetAssetID<GameObject>(prefab.name);
-                Log.LogInfo($"Found Trader: {prefab.name}, AssetID: {assetID}", Log.InfoLevel.Medium);
-                Instance.TraderPrefabNameToAssetID.Add(prefab.name, assetID);
-            }
-        }
+        //    if (prefab.GetComponent<Trader>())
+        //    {
+        //        AssetID assetID = AssetManager.Instance.GetAssetID<GameObject>(prefab.name);
+        //        Log.LogInfo($"Found Trader: {prefab.name}, AssetID: {assetID}", Log.InfoLevel.Medium);
+        //        Instance.TraderPrefabNameToAssetID.Add(prefab.name, assetID);
+        //    }
+        //}
 
-        foreach (ZoneSystem.ZoneLocation zoneLocation in __instance.m_locations)
-        {
-            if (!zoneLocation.m_enable || 
-                string.IsNullOrEmpty(zoneLocation.m_prefabName) ||
-                Instance.IsTraderLocationMap.ContainsKey(zoneLocation.m_prefabName) || 
-                Instance.TraderLocationNames.Contains(zoneLocation.m_prefabName))
-            {
-                continue;
-            }
+        //foreach (ZoneSystem.ZoneLocation zoneLocation in __instance.m_locations)
+        //{
+        //    if (!zoneLocation.m_enable || 
+        //        string.IsNullOrEmpty(zoneLocation.m_prefabName) ||
+        //        Instance.LocationTraderInfoMap.ContainsKey(zoneLocation.m_prefabName) ||
+        //        Instance.TraderLocationNames.Contains(zoneLocation.m_prefabName))
+        //    {
+        //        continue;
+        //    }
 
-            try
-            {
-                Instance.IsTraderLocationMap[zoneLocation.m_prefabName] = false;
+        //    try
+        //    {
+        //        Instance.LocationTraderInfoMap[zoneLocation.m_prefabName] = new LocationTraderInfo() { IsUnique = false, IsTraderLocation = false };
+             
 
-                HashSet<AssetID> dependencies = AssetBundleLoader.Instance.GetDependenciesFromAssetID(zoneLocation.m_prefab.m_assetID);
-                foreach (KeyValuePair<string, AssetID> item in Instance.TraderPrefabNameToAssetID)
-                {
-                    if (dependencies.Contains(item.Value))
-                    {
-                        Instance.IsTraderLocationMap[zoneLocation.m_prefabName] = true;
-                        Instance.TraderLocationNames.Add(zoneLocation.m_prefabName);
-                        Instance.IsTraderLocationUniqueMap[zoneLocation.m_prefabName] = zoneLocation.m_unique;
-                        string isUniqueText = zoneLocation.m_unique ? "is Unique" : "is Not Unique";
-                        Log.LogInfo($"Location: {zoneLocation.m_prefabName} has Trader: {item.Key} and {isUniqueText}", Log.InfoLevel.Medium);
-                        break;
-                    }
-                }
-            }
-            catch
-            {
-                Log.LogError($"Failed to scan location: {zoneLocation.m_prefabName}");
-            }
-            
-        }
-        stopwatch.Stop();
-        Log.LogInfo($"Time to search for trader locations: {stopwatch.ElapsedMilliseconds} ms");
+        //        HashSet<AssetID> dependencies = AssetBundleLoader.Instance.GetDependenciesFromAssetID(zoneLocation.m_prefab.m_assetID);
+        //        foreach (KeyValuePair<string, AssetID> item in Instance.TraderPrefabNameToAssetID)
+        //        {
+        //            if (dependencies.Contains(item.Value) && zoneLocation.m_unique)
+        //            {
+        //                Instance.LocationTraderInfoMap[zoneLocation.m_prefabName].IsTraderLocation = true;
+        //                Instance.LocationTraderInfoMap[zoneLocation.m_prefabName].IsUnique = zoneLocation.m_unique;
+        //                Instance.TraderLocationNames.Add(zoneLocation.m_prefabName);
+        //                string isUniqueText = zoneLocation.m_unique ? "is Unique" : "is Not Unique";
+        //                Log.LogInfo($"Location: {zoneLocation.m_prefabName} has dependency on Trader: {item.Key} and {isUniqueText}", Log.InfoLevel.Medium);
+        //                break;
+        //            }
+        //        }
+        //    }
+        //    catch
+        //    {
+        //        Log.LogError($"Failed to scan location: {zoneLocation.m_prefabName}");
+        //    }
+        //}
+        //stopwatch.Stop();
+        //Log.LogInfo($"Time to search for trader locations: {stopwatch.ElapsedMilliseconds} ms");
 
         if (!ZNet.instance.IsServer())
         {
@@ -238,15 +253,16 @@ internal sealed class TraderLocationManager
 
         closest = default;
         bool result = false;
+        float distance;
         float minDistance = float.MaxValue;
+        ZoneSystem.LocationInstance closestLocationInstance;
         foreach (KeyValuePair<string, List<ZoneSystem.LocationInstance>> item in traderLocationInstances)
         {
-            bool isUniqueLocation = IsTraderLocationUniqueMap[item.Key];
             bool foundUndiscoveredLocation = Instance.FindClosestUndiscoveredLocationInList(
-                isUniqueLocation,
+                LocationTraderInfoMap[item.Key].IsUnique,
                 item.Value,
-                out float distance,
-                out ZoneSystem.LocationInstance closestLocationInstance
+                out distance,
+                out closestLocationInstance
             );
             Log.LogInfo($"{item.Key} has undiscovered location: {foundUndiscoveredLocation}", Log.InfoLevel.Medium);
 
@@ -345,6 +361,6 @@ internal sealed class TraderLocationManager
     /// <returns></returns>
     private bool HasLocationInstanceBeenDiscovered(ZoneSystem.LocationInstance locationInstance)
     {
-        return locationInstance.m_location.m_iconAlways || (locationInstance.m_location.m_iconPlaced && locationInstance.m_placed);
+        return locationInstance.m_location.m_iconAlways || locationInstance.m_placed;
     }
 }

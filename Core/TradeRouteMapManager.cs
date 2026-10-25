@@ -91,13 +91,14 @@ internal static class TradeRouteMapManager
             return TradeRouteMapTradeItem;
         }
 
-        var tradeMap = GetTradeRouteMapCustomItem();
+        CustomItem tradeMap = GetTradeRouteMapCustomItem();
 
         TradeRouteMapTradeItem = new Trader.TradeItem()
         {
             m_prefab = tradeMap.ItemDrop,
             m_stack = 1,
-            m_price = ShowMeTheGoods.Instance.MapCost.Value
+            m_price = ShowMeTheGoods.Instance.MapCost.Value,
+            m_tooltip = tradeMap.ItemDrop.m_itemData.m_shared.m_description
         };
 
         return TradeRouteMapTradeItem;

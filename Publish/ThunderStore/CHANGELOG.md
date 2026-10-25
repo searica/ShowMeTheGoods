@@ -8,6 +8,16 @@
 			<th align="center">Notes</th>
 		</tr>
 		<tr>
+			<td align="center">0.3.0/0.3.1</td>
+			<td align="left">
+				<ul>
+					<li>Updated for Valheim 1.0.20.</li>
+					<li>Restricted it to only work for Trader locations from the base game due to changes in the way locations and assets are handled now.</li>
+					<li>Fixed broken tooltip when buying the map from a trader.</li>
+				</ul>
+			</td>
+		</tr>
+		<tr>
 			<td align="center">0.2.3</td>
 			<td align="left">
 				<ul>

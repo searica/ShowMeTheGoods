@@ -20,16 +20,16 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
     public const string PluginName = "ShowMeTheGoods";
     internal const string Author = "Searica";
     public const string PluginGUID = $"{Author}.Valheim.{PluginName}";
-    public const string PluginVersion = "0.2.3";
+    public const string PluginVersion = "0.3.1";
 
     internal static ShowMeTheGoods Instance;
     internal static ConfigFile ConfigFile;
     internal static ConfigFileWatcher ConfigFileWatcher;
 
     // Global settings
-    internal const string GlobalSection = "Global";
+    internal const string MainConfigSection = PluginName;
     internal ConfigEntry<int> MapCost;
-    
+    private bool AddedCustomItems = false;
     public void Awake()
     {
         Instance = this;
@@ -52,17 +52,34 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
 
     internal void SetUpConfigEntries()
     {
+        Log.Verbosity = Config.BindConfigInOrder(
+            MainConfigSection,
+            "Verbosity",
+            Log.InfoLevel.Low,
+            "Low will log basic information about the mod. Medium will log information that " +
+            "is useful for troubleshooting. High will log a lot of information, do not set " +
+            "it to this without good reason as it will slow Down your game.",
+            synced: false,
+            sectionOrder: false
+        );
+
         MapCost = Config.BindConfigInOrder(
-            GlobalSection,
+            MainConfigSection,
             "Map Cost",
             2000,
             "Cost of the map in coins.",
             synced: true,
-            acceptableValues: new AcceptableValueRange<int>(1, 10000)
+            acceptableValues: new AcceptableValueRange<int>(1, 10000),
+            sectionOrder: false
         );
+
         MapCost.SettingChanged += (obj, e) =>
         {
-            TradeRouteMapManager.UpdateTradeItemCost();
+            if (AddedCustomItems)
+            {
+                TradeRouteMapManager.UpdateTradeItemCost();
+            }
+            
         };
     }
 
@@ -72,6 +89,7 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
         ItemManager.Instance.AddItem(TradeRouteMapManager.GetTradeRouteMapCustomItem());
         // Only want this to run once, Jotunn has the item cached for the game session
         PrefabManager.OnVanillaPrefabsAvailable -= AddCustomItems;
+        AddedCustomItems = true;
     }
 
     public void OnDestroy()
