@@ -20,7 +20,7 @@ internal sealed class ShowMeTheGoods : BaseUnityPlugin
     public const string PluginName = "ShowMeTheGoods";
     internal const string Author = "Searica";
     public const string PluginGUID = $"{Author}.Valheim.{PluginName}";
-    public const string PluginVersion = "0.3.1";
+    public const string PluginVersion = "0.3.2";
 
     internal static ShowMeTheGoods Instance;
     internal static ConfigFile ConfigFile;

@@ -8,6 +8,14 @@
 			<th align="center">Notes</th>
 		</tr>
 		<tr>
+			<td align="center">0.3.2</td>
+			<td align="left">
+				<ul>
+					<li>Adds explicit support for the traders and skill trainers from More World Locations AIO.</li>
+				</ul>
+			</td>
+		</tr>
+		<tr>
 			<td align="center">0.3.0/0.3.1</td>
 			<td align="left">
 				<ul>

@@ -1,12 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
-using SoftReferenceableAssets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using HarmonyLib;
-using Jotunn.Managers;
 using Logging;
-using ShowMeTheGoods.Extensions;
+
 
 
 
@@ -15,27 +12,69 @@ namespace ShowMeTheGoods.Core;
 [HarmonyPatch]
 internal sealed class TraderLocationManager
 {
-    //private readonly Dictionary<string, AssetID> TraderPrefabNameToAssetID = [];
+    internal class LocationTraderInfo
+    {
+        public bool IsUnique;
+        public bool IsTraderLocation;
+    }
 
-    private readonly Dictionary<string, LocationTraderInfo> LocationTraderInfoMap = new()
+    internal Dictionary<string, LocationTraderInfo> TraderLocationInfoMap {
+        get 
+        {
+            if (!IsValid() || Internal_TraderLocationInfoMap.Count > 0)
+            {
+                return Internal_TraderLocationInfoMap;
+            }
+            
+            foreach (KeyValuePair<string, LocationTraderInfo> pair in Vanilla_TraderLocationInfoMap)
+            {
+                Internal_TraderLocationInfoMap.Add(pair.Key, pair.Value);
+            }
+
+            if (!ModCompat.IsMWLInstalled())
+            {
+                return Internal_TraderLocationInfoMap;
+            }
+
+            foreach (KeyValuePair<string, LocationTraderInfo> pair in MWL_TraderLocationInfoMap)
+            {
+                Internal_TraderLocationInfoMap.Add(pair.Key, pair.Value);
+            }
+
+            return Internal_TraderLocationInfoMap;
+        } 
+    }
+
+    private static readonly Dictionary<string, LocationTraderInfo> Internal_TraderLocationInfoMap = [];
+
+    private static readonly Dictionary<string, LocationTraderInfo> Vanilla_TraderLocationInfoMap = new()
     {
         {"Vendor_BlackForest", new() {IsUnique = true, IsTraderLocation = true } },
         {"Hildir_camp", new() {IsUnique = true, IsTraderLocation = true } },
         {"BogWitch_Camp", new() {IsUnique = true, IsTraderLocation = true } },
     };
 
-    private readonly HashSet<string> TraderLocationNames = ["Vendor_BlackForest", "Hildir_camp", "BogWitch_Camp"];
+    private static readonly Dictionary<string, LocationTraderInfo> MWL_TraderLocationInfoMap = new()
+    {
+        {"MWL_PlainsTavern1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_PlainsCamp1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_BlackForestBlacksmith1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_BlackForestBlacksmith2", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_MountainsBlacksmith1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_MistlandsBlacksmith1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_OceanTavern1", new() {IsUnique = true, IsTraderLocation = true } },
+
+        {"MWL_MeadowsTrainer1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_SwampTrainer1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_PlainsTrainer1", new() {IsUnique = true, IsTraderLocation = true } },
+        {"MWL_MistTrainer1", new() {IsUnique = true, IsTraderLocation = true } },
+    };
+
 
     private GameObject gameObject;
     private TradeRouteMap TraderRouteMap;
     public static TraderLocationManager Instance;
     private static bool HasInit = false;
-
-    private class LocationTraderInfo
-    {
-        public bool IsUnique;
-        public bool IsTraderLocation;
-    }
 
     private static bool IsValid()
     {
@@ -258,8 +297,8 @@ internal sealed class TraderLocationManager
         ZoneSystem.LocationInstance closestLocationInstance;
         foreach (KeyValuePair<string, List<ZoneSystem.LocationInstance>> item in traderLocationInstances)
         {
-            bool foundUndiscoveredLocation = Instance.FindClosestUndiscoveredLocationInList(
-                LocationTraderInfoMap[item.Key].IsUnique,
+            bool foundUndiscoveredLocation = FindClosestUndiscoveredLocationInList(
+                TraderLocationInfoMap[item.Key].IsUnique,
                 item.Value,
                 out distance,
                 out closestLocationInstance
@@ -284,22 +323,20 @@ internal sealed class TraderLocationManager
     private Dictionary<string, List<ZoneSystem.LocationInstance>> GetTraderLocationInstances()
     {
         Dictionary<string, List<ZoneSystem.LocationInstance>> traderLocationInstances = [];
-        foreach (string name in Instance.TraderLocationNames)
+        foreach (string name in TraderLocationInfoMap.Keys)
         {
             traderLocationInstances.Add(name, []);
         }
 
         foreach (ZoneSystem.LocationInstance locationInstance in ZoneSystem.instance.m_locationInstances.Values)
         {
-            string locationName = locationInstance.m_location.m_prefabName;
-            
-            if (traderLocationInstances.ContainsKey(locationName))
+            if (traderLocationInstances.ContainsKey(locationInstance.m_location.m_prefabName))
             {
-                traderLocationInstances[locationName].Add(locationInstance);
+                traderLocationInstances[locationInstance.m_location.m_prefabName].Add(locationInstance);
             }
         }
 
-        foreach (string locationName in Instance.TraderLocationNames)
+        foreach (string locationName in TraderLocationInfoMap.Keys)
         {
             int nLocations = traderLocationInstances[locationName].Count;
             Log.LogInfo($"{locationName} has {nLocations} Location Instances", Log.InfoLevel.Medium);
@@ -317,7 +354,7 @@ internal sealed class TraderLocationManager
     /// <param name="minDistance"></param>
     /// <param name="closest"></param>
     /// <returns></returns>
-    private bool FindClosestUndiscoveredLocationInList(
+    private static bool FindClosestUndiscoveredLocationInList(
         bool isUniqueLocation, 
         List<ZoneSystem.LocationInstance> locationInstances, 
         out float minDistance, 
@@ -331,7 +368,7 @@ internal sealed class TraderLocationManager
 
         foreach (ZoneSystem.LocationInstance locationInstance in locationInstances)
         {
-            if (Instance.HasLocationInstanceBeenDiscovered(locationInstance))
+            if (HasLocationInstanceBeenDiscovered(locationInstance))
             {
                 // end search and say it failed if these locations are unique and have already been discoverd.
                 if (isUniqueLocation)
@@ -359,7 +396,7 @@ internal sealed class TraderLocationManager
     /// </summary>
     /// <param name="locationInstance"></param>
     /// <returns></returns>
-    private bool HasLocationInstanceBeenDiscovered(ZoneSystem.LocationInstance locationInstance)
+    private static bool HasLocationInstanceBeenDiscovered(ZoneSystem.LocationInstance locationInstance)
     {
         return locationInstance.m_location.m_iconAlways || locationInstance.m_placed;
     }

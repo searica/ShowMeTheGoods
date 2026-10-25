@@ -8,8 +8,8 @@ For managing configuration setting you can use an in-game configuration manager 
 change configs by editing the config file on disk as this mod has a built in file watcher.
 
 ## Features
-You can buy a map from any trader in the game (unfortunately it only works for the traders in the base game) that will give you 
-the rough area that the nearest undiscovered trader is relative to your current position. 
+You can buy a map from any trader in the game that will give you the rough area that the nearest undiscovered trader is relative to your current position. Currently the map can only provide hints for the 
+three traders in the base game and those added by More World Locations AIO.
 
 ## Donations/Tips
 My mods will always be free to use but if you feel like saying thanks you can tip/donate.
